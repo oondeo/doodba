@@ -10,6 +10,7 @@ services:
     environment:
       EMAIL_FROM: test@example.com
       INITIAL_LANG: es_ES
+      LOG_LEVEL: DEBUG
       PGUSER: another_odoo
       PGPASSWORD: anotherodoopassword
       PGHOST: postgresql
