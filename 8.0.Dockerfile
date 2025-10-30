@@ -107,9 +107,9 @@ COPY qa /qa
 RUN virtualenv --system-site-packages /qa/venv \
     && . /qa/venv/bin/activate \
     && pip install \
-    click \
-    coverage \
-    six \
+    click==7.1.2 \
+    coverage==5.5 \
+    six==1.7.3 \
     && deactivate \
     && mkdir -p /qa/artifacts \
     && git clone --depth 1 $MQT /qa/mqt
@@ -144,22 +144,21 @@ RUN build_deps=" \
     && pip install \
     -r https://raw.githubusercontent.com/$ODOO_SOURCE/$ODOO_VERSION/requirements.txt \
     'websocket-client~=0.56' \
-    astor \
-    "git-aggregator<3.0.0" \
-    # Install fix from https://github.com/acsone/click-odoo-contrib/pull/93
-    git+https://github.com/Tecnativa/click-odoo-contrib.git@fix-active-modules-hashing \
-    "pg_activity<2.0.0" \
-    phonenumbers \
-    plumbum \
-    ptvsd \
-    debugpy \
+    astor==0.8.1 \
+    git-aggregator==1.8.1 \
+    click-odoo-contrib==1.5.1.dev113+g01f6d5e \
+    pg-activity==1.6.2 \
+    phonenumbers==8.13.40 \
+    plumbum==1.7.2 \
+    ptvsd==4.3.2 \
+    debugpy==1.5.1 \
     pydevd-odoo==1.1 \
-    pudb \
-    python-magic \
-    watchdog \
-    wdb \
-    geoip2 \
-    inotify \
+    pudb==2019.2 \
+    python-magic==0.4.27 \
+    watchdog==0.10.7 \
+    wdb==3.3.0 \
+    geoip2==3.0.0 \
+    inotify==0.2.10 \
     && pip install psycopg2==2.7.3.1 \
     && (python -m compileall -q /usr/local/lib/python2.7/ || true) \
     && apt-get purge -yqq $build_deps \
