@@ -35,9 +35,12 @@ ENV DB_FILTER=.* \
     WDB_WEB_PORT=1984 \
     WDB_WEB_SERVER=localhost
 
+# Debian buster was moved to archive (and buster-updates does not exist in archive)
+RUN sed -i 's,http://deb.debian.org,http://archive.debian.org,g;s,http://security.debian.org,http://archive.debian.org,g;s,\(.*buster-updates\),#\1,' /etc/apt/sources.list
+
 # Other requirements and recommendations
 # See https://github.com/$ODOO_SOURCE/blob/$ODOO_VERSION/debian/control
-RUN echo deb http://archive.debian.org/debian/ buster contrib main non-free > /etc/apt/sources.list && apt-get -qq update \
+RUN apt-get -qq update \
     && apt-get install -yqq --no-install-recommends \
     curl \
     && curl -SLo wkhtmltox.deb https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/${WKHTMLTOPDF_VERSION}/wkhtmltox_${WKHTMLTOPDF_VERSION}-1.buster_amd64.deb \
