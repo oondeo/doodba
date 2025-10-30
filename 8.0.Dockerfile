@@ -37,9 +37,7 @@ ENV DB_FILTER=.* \
 
 # Other requirements and recommendations
 # See https://github.com/$ODOO_SOURCE/blob/$ODOO_VERSION/debian/control
-# TODO: move to archive http://archive.debian.org/debian-security/dists/buster/updates/
-# RUN sed -i 's,http://deb.debian.org,http://archive.debian.org,g;s,http://security.debian.org,http://archive.debian.org,g;s,\(.*stretch-updates\),#\1,' /etc/apt/sources.list
-RUN apt-get -qq update \
+RUN echo deb http://archive.debian.org/debian/ buster contrib main non-free > /etc/apt/sources.list && apt-get -qq update \
     && apt-get install -yqq --no-install-recommends \
     curl \
     && curl -SLo wkhtmltox.deb https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/${WKHTMLTOPDF_VERSION}/wkhtmltox_${WKHTMLTOPDF_VERSION}-1.buster_amd64.deb \
@@ -58,6 +56,8 @@ RUN apt-get -qq update \
     telnet \
     vim \
     zlibc \
+    && echo 'deb https://apt-archive.postgresql.org/pub/repos/apt buster-pgdg main' >> /etc/apt/sources.list.d/postgresql.list \
+    && curl -SL https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
     && apt-get update \
     && apt-get install -yqq --no-install-recommends \
     && curl --silent -L --output geoipupdate_${GEOIP_UPDATER_VERSION}_linux_amd64.deb https://github.com/maxmind/geoipupdate/releases/download/v${GEOIP_UPDATER_VERSION}/geoipupdate_${GEOIP_UPDATER_VERSION}_linux_amd64.deb \

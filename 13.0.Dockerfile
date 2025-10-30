@@ -37,7 +37,7 @@ ENV DB_FILTER=.* \
 
 # Other requirements and recommendations
 # See https://github.com/$ODOO_SOURCE/blob/$ODOO_VERSION/debian/control
-RUN apt-get -qq update \
+RUN echo deb http://archive.debian.org/debian/ buster contrib main non-free > /etc/apt/sources.list && apt-get -qq update \
     && apt-get install -yqq --no-install-recommends \
         curl \
     && curl -SLo wkhtmltox.deb https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/${WKHTMLTOPDF_VERSION}/wkhtmltox_${WKHTMLTOPDF_VERSION}-1.buster_amd64.deb \
