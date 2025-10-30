@@ -103,8 +103,8 @@ jobs:
           platforms: ${{ matrix.platforms }}
           push: true
           tags: |
-            ${{ env.DOCKER_REPO }}:${{ matrix.odoo_version }}-pr-${{ env.GITHUB_SHA }}-test
-            ${{ env.GHCR_HOST }}/${{ env.DOCKER_REPO }}${{ env.DOCKER_REPO_SUFFIX }}:${{ matrix.odoo_version }}-pr-${{ env.GITHUB_SHA }}-test
+            ${{ env.DOCKER_REPO }}:${{ matrix.odoo_version }}-pr-${{ github.sha }}-test
+            ${{ env.GHCR_HOST }}/${{ env.DOCKER_REPO }}${{ env.DOCKER_REPO_SUFFIX }}:${{ matrix.odoo_version }}-pr-${{ github.sha }}-test
           target: base
           build-args: |
             VCS_REF=${{ github.sha }}
@@ -118,8 +118,8 @@ jobs:
           platforms: ${{ matrix.platforms }}
           push: true
           tags: |
-            ${{ env.DOCKER_REPO }}:${{ matrix.odoo_version }}-pr-${{ env.GITHUB_SHA }}-test-onbuild
-            ${{ env.GHCR_HOST }}/${{ env.DOCKER_REPO }}${{ env.DOCKER_REPO_SUFFIX }}:${{ matrix.odoo_version }}-pr-${{ env.GITHUB_SHA }}-test-onbuild
+            ${{ env.DOCKER_REPO }}:${{ matrix.odoo_version }}-pr-${{ github.sha }}-test-onbuild
+            ${{ env.GHCR_HOST }}/${{ env.DOCKER_REPO }}${{ env.DOCKER_REPO_SUFFIX }}:${{ matrix.odoo_version }}-pr-${{ github.sha }}-test-onbuild
           target: onbuild
           build-args: |
             VCS_REF=${{ github.sha }}
@@ -177,7 +177,7 @@ jobs:
 
     env:
       DOCKER_BUILDKIT: 1
-      DOCKER_TAG: ${{ matrix.odoo_version }}-pr-${{ env.GITHUB_SHA }}-test
+      DOCKER_TAG: ${{ matrix.odoo_version }}-pr-${{ github.sha }}-test
       PG_VERSIONS: ${{ matrix.pg_version }}
       ODOO_MINOR: ${{ matrix.odoo_version }}
       # signal to tests that they can use the prebuilt images from registries and do not need to build the image in setupClass
