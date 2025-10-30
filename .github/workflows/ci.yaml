@@ -5,9 +5,6 @@ on:
   push:
     branches:
       - oondeo
-  schedule:
-    # See https://crontab.guru/weekly
-    - cron: 0 0 * * 0
 
 jobs:
   pre-commit:
@@ -29,7 +26,6 @@ jobs:
 
   build-push-pr:
     # Build & push PR images so tests and local dev can pull them
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     needs: pre-commit
     strategy:
@@ -278,8 +274,8 @@ jobs:
       - run: poetry run python -m unittest -v tests
 
   build-push-official:
-    # Only publish final images from master after tests pass
-    if: github.repository == 'oondeo/doodba' && github.ref == 'refs/heads/master'
+    # Only publish final images from oondeo after tests pass
+    if: github.repository == 'oondeo/doodba' && github.ref == 'refs/heads/oondeo'
     runs-on: ubuntu-24.04
     needs: test
     strategy:
@@ -338,13 +334,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to Docker Hub
-        if: github.repository == 'oondeo/doodba' && github.ref == 'refs/heads/master'
+        if: github.repository == 'oondeo/doodba' && github.ref == 'refs/heads/oondeo'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_LOGIN }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GitHub Container Registry
-        if: github.repository == 'oondeo/doodba' && github.ref == 'refs/heads/master'
+        if: github.repository == 'oondeo/doodba' && github.ref == 'refs/heads/oondeo'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -358,7 +354,7 @@ jobs:
           platforms: ${{ matrix.platforms }}
           push:
             ${{ github.repository == 'oondeo/doodba' && github.ref ==
-            'refs/heads/master' }}
+            'refs/heads/oondeo' }}
           tags: |
             ${{ env.DOCKER_REPO }}:${{ matrix.odoo_version }}
             ${{ env.GHCR_HOST }}/${{ env.DOCKER_REPO }}${{ env.DOCKER_REPO_SUFFIX }}:${{ matrix.odoo_version }}
@@ -377,7 +373,7 @@ jobs:
           platforms: ${{ matrix.platforms }}
           push:
             ${{ github.repository == 'oondeo/doodba' && github.ref ==
-            'refs/heads/master' }}
+            'refs/heads/oondeo' }}
           tags: |
             ${{ env.DOCKER_REPO }}:${{ matrix.odoo_version }}-onbuild
             ${{ env.GHCR_HOST }}/${{ env.DOCKER_REPO }}${{ env.DOCKER_REPO_SUFFIX }}:${{ matrix.odoo_version }}-onbuild
