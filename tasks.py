@@ -52,7 +52,7 @@ def test(c, odoo_version="18.0", pg_version="16", failfast=False, tests="tests")
     if failfast:
         flags.append("--failfast")
     else:
-        cmd = f"uv run python -m unittest { " ".join(flags)} {tests}"
+        cmd = f"uv run python -m unittest { ' '.join(flags)} {tests}"
     with c.cd(str(TEMPLATE_ROOT)):
         c.run(
             cmd,
