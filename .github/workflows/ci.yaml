@@ -165,24 +165,17 @@ jobs:
           - odoo_version: "11.0"
             pg_version: "11"
             python_version: "3.9"
-          - odoo_version: "10.0"
-            pg_version: "11"
-            python_version: "3.9"
-          - odoo_version: "9.0"
-            pg_version: "11"
-            python_version: "3.9"
-          - odoo_version: "8.0"
-            pg_version: "11"
-            python_version: "3.9"
-
     env:
+      WKHTMLTOPDF: ""
       DOCKER_BUILDKIT: 1
-      DOCKER_TAG: ${{ matrix.odoo_version }}-pr-${{ github.sha }}-test
+      DOCKER_TAG:
+        ${{ matrix.odoo_version }}-pr-${{ github.event.pull_request.number }}-test
       PG_VERSIONS: ${{ matrix.pg_version }}
       ODOO_MINOR: ${{ matrix.odoo_version }}
       # signal to tests that they can use the prebuilt images from registries and do not need to build the image in setupClass
-      USE_PREBUILT_IMAGES: ""
-      WKHTMLTOPDF: ""
+      USE_PREBUILT_IMAGES:
+        ${{ github.repository == 'oondeo/doodba' &&
+        github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
@@ -191,11 +184,12 @@ jobs:
       - uses: docker/setup-compose-action@v1
         with:
           version: latest
-      - run: pip install poetry
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
       - name: Patch $PATH
         run: echo "$HOME/.local/bin" >> $GITHUB_PATH
-      - run: poetry install
-      - run: poetry run python -m unittest -v tests
+      - run: uv install
+      - run: uv run python -m unittest -v tests
 
   build-push-official:
     # Only publish final images from oondeo after tests pass
