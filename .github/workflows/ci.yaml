@@ -60,7 +60,7 @@ jobs:
             platforms: "linux/amd64"
     env:
       # Indicates what's the equivalent to tecnativa/doodba:latest image
-      LATEST_RELEASE: "19.0"
+      LATEST_RELEASE: "18.0"
       DOCKER_REPO: oondeo/doodba
       GHCR_HOST: ghcr.io
     steps:
@@ -228,7 +228,7 @@ jobs:
             platforms: "linux/amd64"
     env:
       # Indicates what tag matches tecnativa/doodba:latest
-      LATEST_RELEASE: "19.0"
+      LATEST_RELEASE: "18.0"
       # Define the docker hub repository location and github container registry host
       DOCKER_REPO: oondeo/doodba
       GHCR_HOST: ghcr.io
