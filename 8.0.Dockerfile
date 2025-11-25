@@ -30,15 +30,11 @@ ENV DB_FILTER=.* \
     PYTHONOPTIMIZE="" \
     UNACCENT=true \
     WAIT_DB=true \
-    UV_COMPILE_BYTECODE=1 \
-    UV_LINK_MODE=copy \
-    UV_NO_MANAGED_PYTHON=1 \
     WDB_NO_BROWSER_AUTO_OPEN=True \
     WDB_SOCKET_SERVER=wdb \
     WDB_WEB_PORT=1984 \
     WDB_WEB_SERVER=localhost
 
-COPY --from=ghcr.io/astral-sh/uv /uv /uvx /bin/
 # Debian buster was moved to archive (and buster-updates does not exist in archive)
 RUN sed -i 's,http://deb.debian.org,http://archive.debian.org,g;s,http://security.debian.org,http://archive.debian.org,g;s,\(.*buster-updates\),#\1,' /etc/apt/sources.list
 
@@ -75,20 +71,6 @@ RUN apt-get -qq update \
     && sync
 
 WORKDIR /opt/odoo
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=tmpfs,target=/tmp \
-    uv pip install --system --upgrade install \
-    click-odoo-contrib \
-    git-aggregator \
-    plumbum \
-    ptvsd \
-    debugpy \
-    pudb \
-    virtualenv \
-    wdb \
-    simplejson \
-    geoip2 \
-    && sync
 COPY bin-deprecated/* bin/* /usr/local/bin/
 COPY lib/doodbalib /usr/local/lib/python2.7/site-packages/doodbalib
 RUN ln -s /usr/local/lib/python2.7/site-packages/doodbalib \
@@ -108,27 +90,12 @@ RUN mkdir -p auto/addons auto/geoip custom/src/private \
     && sync
 
 
-# Doodba-QA dependencies in a separate virtualenv
-COPY qa /qa
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv venv --system-site-packages /qa/venv \
-    && . /qa/venv/bin/activate \
-    && pip install \
-    click==7.1.2 \
-    coverage==5.5 \
-    six==1.7.3 \
-    && deactivate \
-    && mkdir -p /qa/artifacts \
-    && git clone --depth 1 $MQT /qa/mqt
-
 ARG ODOO_SOURCE=OCA/OpenUpgrade
 ARG ODOO_VERSION=8.0
 ENV ODOO_VERSION="$ODOO_VERSION"
 
 # Install Odoo hard & soft dependencies, and Doodba utilities
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=tmpfs,target=/tmp \
-    build_deps=" \
+RUN build_deps=" \
     build-essential \
     libfreetype6-dev \
     libfribidi-dev \
@@ -150,12 +117,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     " \
     && apt-get update \
     && apt-get install -yqq --no-install-recommends $build_deps \
-    && uv pip install --system --upgrade \
+    && pip install \
     -r https://raw.githubusercontent.com/$ODOO_SOURCE/$ODOO_VERSION/requirements.txt \
     'websocket-client~=0.56' \
     astor==0.8.1 \
     git-aggregator==1.8.1 \
-    click-odoo-contrib==1.5.1.dev113+g01f6d5e \
+    click-odoo-contrib==1.15.1\
     pg-activity==1.6.2 \
     phonenumbers==8.13.40 \
     plumbum==1.7.2 \
@@ -167,12 +134,26 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     watchdog==0.10.7 \
     wdb==3.3.0 \
     geoip2==3.0.0 \
+    virtualenv==20.0.18 \
     inotify==0.2.10 \
-    && uv pip install --system psycopg2==2.7.3.1 \
+    uncompyle6==3.9.2 \
+    && pip install psycopg2==2.7.3.1 \
     && (python -m compileall -q /usr/local/lib/python2.7/ || true) \
     && apt-get purge -yqq $build_deps \
     && apt-get autopurge -yqq \
     && rm -Rf /var/lib/apt/lists/* /tmp/*
+
+# Doodba-QA dependencies in a separate virtualenv
+COPY qa /qa
+RUN virtualenv --system-site-packages /qa/venv \
+    && . /qa/venv/bin/activate \
+    && pip install \
+    click==7.1.2 \
+    coverage==5.5 \
+    six==1.7.3 \
+    && deactivate \
+    && mkdir -p /qa/artifacts \
+    && git clone --depth 1 $MQT /qa/mqt
 
 # Metadata
 ARG VCS_REF
