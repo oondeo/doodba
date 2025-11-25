@@ -30,11 +30,15 @@ ENV DB_FILTER=.* \
     PYTHONOPTIMIZE="" \
     UNACCENT=true \
     WAIT_DB=true \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_NO_MANAGED_PYTHON=1 \
     WDB_NO_BROWSER_AUTO_OPEN=True \
     WDB_SOCKET_SERVER=wdb \
     WDB_WEB_PORT=1984 \
     WDB_WEB_SERVER=localhost
 
+COPY --from=ghcr.io/astral-sh/uv /uv /uvx /bin/
 # Debian buster was moved to archive (and buster-updates does not exist in archive)
 RUN sed -i 's,http://deb.debian.org,http://archive.debian.org,g;s,http://security.debian.org,http://archive.debian.org,g;s,\(.*buster-updates\),#\1,' /etc/apt/sources.list
 
@@ -71,7 +75,9 @@ RUN apt-get -qq update \
     && sync
 
 WORKDIR /opt/odoo
-RUN pip install \
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=tmpfs,target=/tmp \
+    uv pip install --system --upgrade install \
     click-odoo-contrib \
     git-aggregator \
     plumbum \
@@ -104,7 +110,8 @@ RUN mkdir -p auto/addons auto/geoip custom/src/private \
 
 # Doodba-QA dependencies in a separate virtualenv
 COPY qa /qa
-RUN virtualenv --system-site-packages /qa/venv \
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv venv --system-site-packages /qa/venv \
     && . /qa/venv/bin/activate \
     && pip install \
     click==7.1.2 \
@@ -119,7 +126,9 @@ ARG ODOO_VERSION=8.0
 ENV ODOO_VERSION="$ODOO_VERSION"
 
 # Install Odoo hard & soft dependencies, and Doodba utilities
-RUN build_deps=" \
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=tmpfs,target=/tmp \
+    build_deps=" \
     build-essential \
     libfreetype6-dev \
     libfribidi-dev \
@@ -141,7 +150,7 @@ RUN build_deps=" \
     " \
     && apt-get update \
     && apt-get install -yqq --no-install-recommends $build_deps \
-    && pip install \
+    && uv pip install --system --upgrade \
     -r https://raw.githubusercontent.com/$ODOO_SOURCE/$ODOO_VERSION/requirements.txt \
     'websocket-client~=0.56' \
     astor==0.8.1 \
@@ -159,7 +168,7 @@ RUN build_deps=" \
     wdb==3.3.0 \
     geoip2==3.0.0 \
     inotify==0.2.10 \
-    && pip install psycopg2==2.7.3.1 \
+    && uv pip install --system psycopg2==2.7.3.1 \
     && (python -m compileall -q /usr/local/lib/python2.7/ || true) \
     && apt-get purge -yqq $build_deps \
     && apt-get autopurge -yqq \

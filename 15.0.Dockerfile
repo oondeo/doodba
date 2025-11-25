@@ -1,13 +1,19 @@
-FROM python:3.8-slim-bullseye AS base
+FROM python:3.10-slim-bookworm AS base
 
 EXPOSE 8069 8072
 
 ARG TARGETARCH
 ARG GEOIP_UPDATER_VERSION=6.0.0
 ARG WKHTMLTOPDF="./wkhtmltox.deb"
-ARG WKHTMLTOPDF_VERSION=0.12.5
-ARG WKHTMLTOPDF_AMD64_CHECKSUM='dfab5506104447eef2530d1adb9840ee3a67f30caaad5e9bcb8743ef2f9421bd'
-ARG WKHTMLTOPDF_ARM64_CHECKSUM="3344e3a72f4cb4c1218cf48ac5fa9e88bef62aa7fa6f2295be7d5bc1fef100b1"
+ARG WKHTMLTOPDF_VERSION=0.12.6.1
+ARG WKHTMLTOPDF_AMD64_CHECKSUM='98ba0d157b50d36f23bd0dedf4c0aa28c7b0c50fcdcdc54aa5b6bbba81a3941d'
+ARG WKHTMLTOPDF_ARM64_CHECKSUM="b6606157b27c13e044d0abbe670301f88de4e1782afca4f9c06a5817f3e03a9c"
+ARG WKHTMLTOPDF_URL="https://github.com/wkhtmltopdf/packaging/releases/download/${WKHTMLTOPDF_VERSION}-3/wkhtmltox_${WKHTMLTOPDF_VERSION}-3.bookworm_${TARGETARCH}.deb"
+ARG LAST_SYSTEM_UID=499
+ARG LAST_SYSTEM_GID=499
+ARG FIRST_UID=500
+ARG FIRST_GID=500
+
 ENV DB_FILTER=.* \
     DEPTH_DEFAULT=1 \
     DEPTH_MERGE=100 \
@@ -41,18 +47,15 @@ COPY --from=ghcr.io/astral-sh/uv /uv /uvx /bin/
 
 # Other requirements and recommendations
 # See https://github.com/$ODOO_SOURCE/blob/$ODOO_VERSION/debian/control
-RUN apt-get -qq update \
-    && apt-get install -yqq --no-install-recommends \
-        curl; \
-    if [ "$TARGETARCH" = "arm64" ]; then \
-        if [ "$WKHTMLTOPDF_VERSION" != "0.12.6.1" ]; then \
-            echo "Error: WKHTMLTOPDF_VERSION must be exactly 0.12.6.1 for arm builds. Forcing version to 0.12.6.1"; \
-            export WKHTMLTOPDF_VERSION="0.12.6.1";\
-        fi; \
-        WKHTMLTOPDF_URL="https://github.com/wkhtmltopdf/packaging/releases/download/${WKHTMLTOPDF_VERSION}-2/wkhtmltox_${WKHTMLTOPDF_VERSION}-2.bullseye_${TARGETARCH}.deb" \
+RUN echo "LAST_SYSTEM_UID=$LAST_SYSTEM_UID\nLAST_SYSTEM_GID=$LAST_SYSTEM_GID\nFIRST_UID=$FIRST_UID\nFIRST_GID=$FIRST_GID" >> /etc/adduser.conf \
+    && echo "SYS_UID_MAX $LAST_SYSTEM_UID\nSYS_GID_MAX $LAST_SYSTEM_GID" >> /etc/login.defs \
+    && sed -i -E "s/^UID_MIN\s+[0-9]+.*/UID_MIN $FIRST_UID/;s/^GID_MIN\s+[0-9]+.*/GID_MIN $FIRST_GID/" /etc/login.defs \
+    && useradd --system -u $LAST_SYSTEM_UID -s /usr/sbin/nologin -d / systemd-network \
+    && apt-get -qq update \
+    && apt-get install -yqq --no-install-recommends curl \
+    && if [ "$TARGETARCH" = "arm64" ]; then \
         WKHTMLTOPDF_CHECKSUM=$WKHTMLTOPDF_ARM64_CHECKSUM; \
     elif [ "$TARGETARCH" = "amd64" ]; then \
-        WKHTMLTOPDF_URL="https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/${WKHTMLTOPDF_VERSION}/wkhtmltox_${WKHTMLTOPDF_VERSION}-1.buster_${TARGETARCH}.deb" \
         WKHTMLTOPDF_CHECKSUM=$WKHTMLTOPDF_AMD64_CHECKSUM; \
     else \
         echo "Unsupported architecture: $TARGETARCH" >&2; \
@@ -63,8 +66,8 @@ RUN apt-get -qq update \
     && echo "Expected wkhtmltox checksum: ${WKHTMLTOPDF_CHECKSUM}" \
     && echo "Computed wkhtmltox checksum: $(sha256sum wkhtmltox.deb | awk '{ print $1 }')" \
     && echo "${WKHTMLTOPDF_CHECKSUM} wkhtmltox.deb" | sha256sum -c - \
-    && (dpkg -i wkhtmltox.deb || apt-get -y install -f) \
     && apt-get install -yqq --no-install-recommends \
+        "$WKHTMLTOPDF" \
         chromium \
         ffmpeg \
         fonts-liberation2 \
@@ -77,7 +80,7 @@ RUN apt-get -qq update \
         openssh-client \
         telnet \
         vim \
-    && echo 'deb https://apt.postgresql.org/pub/repos/apt/ bullseye-pgdg main' >> /etc/apt/sources.list.d/postgresql.list \
+    && echo 'deb https://apt.postgresql.org/pub/repos/apt/ bookworm-pgdg main' >> /etc/apt/sources.list.d/postgresql.list \
     && curl -SL https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
     && apt-get update \
     && curl --silent -L --output geoipupdate_${GEOIP_UPDATER_VERSION}_linux_${TARGETARCH}.deb https://github.com/maxmind/geoipupdate/releases/download/v${GEOIP_UPDATER_VERSION}/geoipupdate_${GEOIP_UPDATER_VERSION}_linux_${TARGETARCH}.deb \
@@ -89,7 +92,7 @@ RUN apt-get -qq update \
 
 WORKDIR /opt/odoo
 COPY bin/* /usr/local/bin/
-COPY lib/doodbalib /usr/local/lib/python3.8/site-packages/doodbalib
+COPY lib/doodbalib /usr/local/lib/python3.10/site-packages/doodbalib
 COPY build.d common/build.d
 COPY conf.d common/conf.d
 COPY entrypoint.d common/entrypoint.d
@@ -99,15 +102,13 @@ RUN mkdir -p auto/addons auto/geoip custom/src/private \
     && ln /usr/local/bin/direxec common/entrypoint \
     && ln /usr/local/bin/direxec common/build \
     && chmod -R a+rx common/entrypoint* common/build* /usr/local/bin \
-    && chmod -R a+rX /usr/local/lib/python3.8/site-packages/doodbalib \
+    && chmod -R a+rX /usr/local/lib/python3.10/site-packages/doodbalib \
     && cp -a /etc/GeoIP.conf /etc/GeoIP.conf.orig \
     && mv /etc/GeoIP.conf /opt/odoo/auto/geoip/GeoIP.conf \
     && ln -s /opt/odoo/auto/geoip/GeoIP.conf /etc/GeoIP.conf \
     && sed -i 's/.*DatabaseDirectory .*$/DatabaseDirectory \/opt\/odoo\/auto\/geoip\//g' /opt/odoo/auto/geoip/GeoIP.conf \
     && curl -LsSf https://astral.sh/uv/install.sh | env UV_UNMANAGED_INSTALL="/usr/bin" sh \
     && sync
-
-
 # Doodba-QA dependencies in a separate virtualenv
 COPY qa /qa
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -146,21 +147,23 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         zlib1g-dev \
     " \
     && apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -yqq --no-install-recommends $build_deps \
+    && apt-get install -yqq --no-install-recommends $build_deps \
     && curl -o requirements.txt https://raw.githubusercontent.com/$ODOO_SOURCE/$ODOO_VERSION/requirements.txt \
-    && echo "Setting gevent and greenlet versions to 21.12.0 and 1.1.0 (compatible with Debian Bullseye)" \
-    && sed -i -E "s/(gevent==)[0-9\.]+/\121.12.0/; \
-             s/(greenlet==)[0-9\.]+/\11.1.0/; \
+    # disable gevent version recommendation from odoo and use 22.10.2 used in debian bookworm as python3-gevent
+    && sed -i -E "s/(gevent==)[0-9\.]+/\122.10.2/; \
+             s/(greenlet==)[0-9\.]+/\12.0.2/; \
              s/(reportlab==)[0-9\.]+/reportlab==3.6.13/" requirements.txt \
+    # need to upgrade setuptools, since the fixes for CVE-2024-6345 rolled out in base images we get errors "error: invalid command 'bdist_wheel'"
+    && uv pip install --system --upgrade setuptools \
     && uv pip install --system -r requirements.txt \
         'websocket-client~=0.56' \
         astor \
         click-odoo-contrib \
         debugpy \
         pydevd-odoo \
-        flanker[validator] \
+        git+https://github.com/mailgun/flanker.git@v0.9.15#egg=flanker[validator] \
         geoip2 \
-        "git-aggregator<3.0.0" \
+        "git-aggregator==4.0" \
         inotify \
         pdfminer.six \
         pg_activity \
@@ -171,12 +174,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         python-magic \
         watchdog \
         wdb \
-    && (python3 -m compileall -q /usr/local/lib/python3.8/ || true) \
+    && (python3 -m compileall -q /usr/local/lib/python3.10/ || true) \
     # generate flanker cached tables during install when /usr/local/lib/ is still intended to be written to
     # https://github.com/Tecnativa/doodba/issues/486
     && python3 -c 'from flanker.addresslib import address' >/dev/null 2>&1 \
     && apt-get purge -yqq $build_deps \
-    && apt-get autopurge -yqq
+    && apt-get autopurge -yqq \
+    && rm -Rf /var/lib/apt/lists/* /tmp/*
 
 # Metadata
 ARG VCS_REF
@@ -256,7 +260,8 @@ ONBUILD COPY --chown=root:odoo $LOCAL_CUSTOM_DIR /opt/odoo/custom
 
 # https://docs.python.org/3/library/logging.html#levels
 ONBUILD ARG LOG_LEVEL=INFO
-ONBUILD RUN mkdir -p /opt/odoo/custom/ssh \
+ONBUILD RUN [ -d ~root/.ssh ] && rm -r ~root/.ssh; \
+            mkdir -p /opt/odoo/custom/ssh \
             && ln -s /opt/odoo/custom/ssh ~root/.ssh \
             && chmod -R u=rwX,go= /opt/odoo/custom/ssh \
             && sync
