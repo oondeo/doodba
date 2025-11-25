@@ -168,14 +168,11 @@ jobs:
     env:
       WKHTMLTOPDF: ""
       DOCKER_BUILDKIT: 1
-      DOCKER_TAG:
-        ${{ matrix.odoo_version }}-pr-${{ github.event.pull_request.number }}-test
+      DOCKER_TAG: ${{ matrix.odoo_version }}
       PG_VERSIONS: ${{ matrix.pg_version }}
       ODOO_MINOR: ${{ matrix.odoo_version }}
       # signal to tests that they can use the prebuilt images from registries and do not need to build the image in setupClass
-      USE_PREBUILT_IMAGES:
-        ${{ github.repository == 'oondeo/doodba' &&
-        github.event.pull_request.head.repo.full_name == github.repository }}
+      USE_PREBUILT_IMAGES: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
