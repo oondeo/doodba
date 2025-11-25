@@ -188,7 +188,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
       - name: Patch $PATH
         run: echo "$HOME/.local/bin" >> $GITHUB_PATH
-      - run: uv install
+      - run: uv sync --locked
       - run: uv run python -m unittest -v tests
 
   build-push-official:
