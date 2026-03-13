@@ -176,7 +176,7 @@ jobs:
       ODOO_MINOR: ${{ matrix.odoo_version }}
       # signal to tests that they can use the prebuilt images from registries and do not need to build the image in setupClass
       USE_PREBUILT_IMAGES:
-        ${{ github.repository == 'tecnativa/doodba' &&
+        ${{ github.repository == 'oondeo/doodba' &&
         github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Free disk space

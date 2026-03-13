@@ -10,7 +10,7 @@ ARG WKHTMLTOPDF_CHECKSUM='dfab5506104447eef2530d1adb9840ee3a67f30caaad5e9bcb8743
 ENV DB_FILTER=.* \
     DEPTH_DEFAULT=1 \
     DEPTH_MERGE=100 \
-    EMAIL=https://hub.docker.com/r/tecnativa/odoo \
+    EMAIL=https://hub.docker.com/r/oondeo/odoo \
     GEOIP_ACCOUNT_ID="" \
     GEOIP_LICENSE_KEY="" \
     GIT_AUTHOR_NAME=docker-odoo \
@@ -135,7 +135,7 @@ RUN build_deps=" \
         astor \
         "git-aggregator<3.0.0" \
         # Install fix from https://github.com/acsone/click-odoo-contrib/pull/93
-        git+https://github.com/Tecnativa/click-odoo-contrib.git@fix-active-modules-hashing \
+        git+https://github.com/oondeo/click-odoo-contrib.git@fix-active-modules-hashing \
         "pg_activity<2.0.0" \
         phonenumbers \
         plumbum \
@@ -158,11 +158,11 @@ ARG VCS_REF
 ARG BUILD_DATE
 ARG VERSION
 LABEL org.label-schema.schema-version="$VERSION" \
-      org.label-schema.vendor=Tecnativa \
+      org.label-schema.vendor=oondeo \
       org.label-schema.license=Apache-2.0 \
       org.label-schema.build-date="$BUILD_DATE" \
       org.label-schema.vcs-ref="$VCS_REF" \
-      org.label-schema.vcs-url="https://github.com/Tecnativa/doodba"
+      org.label-schema.vcs-url="https://github.com/oondeo/doodba"
 
 # Onbuild version, with all the magic
 FROM base AS onbuild

@@ -30,11 +30,11 @@ def develop(c):
 @task(
     help={
         "version": "Odoo version to build, defaults to 18.0",
-        "tag": "Docker image tag, defaults to ghcr.io/tecnativa/doodba",
+        "tag": "Docker image tag, defaults to ghcr.io/oondeo/doodba",
         "onbuild": "If false builds only abse image, defaults to True",
     }
 )
-def build(c, version="18.0", tag="ghcr.io/tecnativa/doodba", onbuild=True):
+def build(c, version="18.0", tag="ghcr.io/oondeo/doodba", onbuild=True):
     """Builds the docker image"""
     args = [
         f"--file {version}.Dockerfile",

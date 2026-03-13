@@ -82,7 +82,7 @@ class ScaffoldingCase(unittest.TestCase):
         if "DOCKER_TAG" in os.environ and not use_prebuilt_images:
             print(f"Building {os.environ['DOCKER_TAG']}-onbuild image...")
             cls.build_base_image(
-                f"tecnativa/doodba:{os.environ['DOCKER_TAG']}-onbuild",
+                f"oondeo/doodba:{os.environ['DOCKER_TAG']}-onbuild",
                 f"{os.environ['ODOO_MINOR']}.Dockerfile",
             )
         elif not use_prebuilt_images:
@@ -91,7 +91,7 @@ class ScaffoldingCase(unittest.TestCase):
             for ODOO_VER in ODOO_VERSIONS:
                 print(f"Building {ODOO_VER}-onbuild image...")
                 cls.build_base_image(
-                    f"tecnativa/doodba:{ODOO_VER}-onbuild",
+                    f"oondeo/doodba:{ODOO_VER}-onbuild",
                     f"{ODOO_VER}.Dockerfile",
                 )
         else:
@@ -771,7 +771,7 @@ class ScaffoldingCase(unittest.TestCase):
                     "bash",
                     "-c",
                     "git --git-dir=/opt/odoo/custom/src/odoo/.git log -n 1"
-                    " | grep 'docker-odoo <https://hub.docker.com/r/tecnativa/odoo>'",
+                    " | grep 'docker-odoo <https://hub.docker.com/r/oondeo/odoo>'",
                 ),
             )
 
@@ -804,7 +804,7 @@ class ScaffoldingCase(unittest.TestCase):
                     "bash",
                     "-c",
                     "git --git-dir=/opt/odoo/custom/src/odoo/.git log -n 1"
-                    " | grep 'docker-odoo <https://hub.docker.com/r/tecnativa/odoo>'",
+                    " | grep 'docker-odoo <https://hub.docker.com/r/oondeo/odoo>'",
                 ),
             )
 
