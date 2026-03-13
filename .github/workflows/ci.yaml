@@ -12,6 +12,7 @@ on:
 jobs:
   pre-commit:
     runs-on: ubuntu-24.04
+    if: github.repository == 'oondeo/doodba' && github.ref == 'refs/heads/oondeo'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
@@ -29,6 +30,8 @@ jobs:
 
   build-push-pr:
     # Build & push PR images so tests and local dev can pull them
+    ## This is disabled for oondeo
+    if: github.event_name == 'pull_request' && github.repository == 'Tecnativa/doodba'
     runs-on: ubuntu-24.04
     needs: pre-commit
     strategy:
@@ -200,7 +203,7 @@ jobs:
       - run: poetry run python -m unittest -v tests
 
   test:
-    if: github.repository == 'oondeo/doodba'
+    if: github.repository == 'oondeo/doodba' && github.ref == 'refs/heads/oondeo'
     runs-on: ubuntu-24.04
     needs: pre-commit
     strategy:
@@ -237,11 +240,11 @@ jobs:
     env:
       WKHTMLTOPDF: ""
       DOCKER_BUILDKIT: 1
-      DOCKER_TAG: ${{ matrix.odoo_version }}-pr-${{ github.sha }}-test
+      DOCKER_TAG: ${{ matrix.odoo_version }}-${{ github.sha }}-test
       PG_VERSIONS: ${{ matrix.pg_version }}
       ODOO_MINOR: ${{ matrix.odoo_version }}
       # signal to tests that they can use the prebuilt images from registries and do not need to build the image in setupClass
-      USE_PREBUILT_IMAGES: true
+      USE_PREBUILT_IMAGES: false
     steps:
       - name: Free disk space
         run: |
