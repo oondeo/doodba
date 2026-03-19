@@ -42,6 +42,7 @@ ENV DB_FILTER=.* \
     WDB_WEB_SERVER=localhost
 
 COPY --from=ghcr.io/astral-sh/uv /uv /uvx /bin/
+
 # Other requirements and recommendations
 # See https://github.com/$ODOO_SOURCE/blob/$ODOO_VERSION/debian/control
 RUN echo "LAST_SYSTEM_UID=$LAST_SYSTEM_UID\nLAST_SYSTEM_GID=$LAST_SYSTEM_GID\nFIRST_UID=$FIRST_UID\nFIRST_GID=$FIRST_GID" >> /etc/adduser.conf \
@@ -156,14 +157,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     && sed -i -E "s/(cbor2==)5\.4\.2( ; python_version < '3.12')/\15.4.6\2/" requirements.txt \
     # need to upgrade setuptools, since the fixes for CVE-2024-6345 rolled out in base images we get errors "error: invalid command 'bdist_wheel'"
     && uv pip install --no-build-isolation --system --upgrade setuptools==80.10.2 \
-    && uv pip install --no-build-isolation --system -r requirements.txt \
-        'websocket-client~=0.56' \
+    && uv pip install --no-build-isolation --system --only-binary :all: \
+        meson-python \
         astor \
         click-odoo-contrib \
         debugpy \
         pydevd-odoo \
         geoip2 \
-        "git-aggregator==4.0" \
         inotify \
         pdfminer.six \
         pg_activity \
@@ -174,6 +174,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         python-magic \
         watchdog \
         wdb \
+        ninja \
+&& uv pip install --no-build-isolation --system -r requirements.txt \
+        'websocket-client~=0.56' \
+        "git-aggregator==4.0" \
         rlPyCairo \
         pycairo \
     && (python3 -m compileall -q /usr/local/lib/python3.12/ || true) \

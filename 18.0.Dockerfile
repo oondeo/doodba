@@ -1,4 +1,4 @@
-FROM python:3.10-slim-bookworm AS base
+FROM python:3.12-slim-bookworm AS base
 
 EXPOSE 8069 8072
 
@@ -91,7 +91,7 @@ RUN echo "LAST_SYSTEM_UID=$LAST_SYSTEM_UID\nLAST_SYSTEM_GID=$LAST_SYSTEM_GID\nFI
 
 WORKDIR /opt/odoo
 COPY bin/* /usr/local/bin/
-COPY lib/doodbalib /usr/local/lib/python3.10/site-packages/doodbalib
+COPY lib/doodbalib /usr/local/lib/python3.12/site-packages/doodbalib
 COPY build.d common/build.d
 COPY conf.d common/conf.d
 COPY entrypoint.d common/entrypoint.d
@@ -101,12 +101,11 @@ RUN mkdir -p auto/addons auto/geoip custom/src/private \
     && ln /usr/local/bin/direxec common/entrypoint \
     && ln /usr/local/bin/direxec common/build \
     && chmod -R a+rx common/entrypoint* common/build* /usr/local/bin \
-    && chmod -R a+rX /usr/local/lib/python3.10/site-packages/doodbalib \
+    && chmod -R a+rX /usr/local/lib/python3.12/site-packages/doodbalib \
     && cp -a /etc/GeoIP.conf /etc/GeoIP.conf.orig \
     && mv /etc/GeoIP.conf /opt/odoo/auto/geoip/GeoIP.conf \
     && ln -s /opt/odoo/auto/geoip/GeoIP.conf /etc/GeoIP.conf \
     && sed -i 's/.*DatabaseDirectory .*$/DatabaseDirectory \/opt\/odoo\/auto\/geoip\//g' /opt/odoo/auto/geoip/GeoIP.conf \
-    && curl -LsSf https://astral.sh/uv/install.sh | env UV_UNMANAGED_INSTALL="/usr/bin" sh \
     && sync
 
 # Doodba-QA dependencies in a separate virtualenv
@@ -148,6 +147,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         tcl-dev \
         tk-dev \
         zlib1g-dev \
+        gcc \
+        libcairo2-dev \
     " \
     && apt-get update \
     && apt-get install -yqq --no-install-recommends $build_deps \
@@ -158,14 +159,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     && sed -i -E "s/(cbor2==)5\.4\.2( ; python_version < '3.12')/\15.4.6\2/" requirements.txt \
     # need to upgrade setuptools, since the fixes for CVE-2024-6345 rolled out in base images we get errors "error: invalid command 'bdist_wheel'"
     && uv pip install --no-build-isolation --system --upgrade setuptools==80.10.2 \
-    && uv pip install --no-build-isolation --system -r requirements.txt \
-        'websocket-client~=0.56' \
+    && uv pip install --no-build-isolation --system --only-binary :all: \
+        meson-python \
         astor \
         click-odoo-contrib \
         debugpy \
         pydevd-odoo \
         geoip2 \
-        "git-aggregator==4.0" \
         inotify \
         pdfminer.six \
         pg_activity \
@@ -176,7 +176,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         python-magic \
         watchdog \
         wdb \
-    && (python3 -m compileall -q /usr/local/lib/python3.10/ || true) \
+        ninja \
+    && uv pip install --no-build-isolation --system -r requirements.txt \
+        'websocket-client~=0.56' \
+        "git-aggregator==4.0" \
+        rlPyCairo \
+        pycairo \
+    && (python3 -m compileall -q /usr/local/lib/python3.12/ || true) \
     && apt-get purge -yqq $build_deps \
     && apt-get autopurge -yqq \
     && uv cache prune --ci \
