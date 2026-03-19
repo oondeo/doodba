@@ -100,6 +100,8 @@ class ScaffoldingCase(unittest.TestCase):
     def setUp(self):
         super().setUp()
         self.compose_run = ("docker", "compose", "run", "--rm", "odoo")
+        if self._testMethodName in os.getenv("DOODBA_SKIP_TESTS", []):
+            self.skipTest(f"Skipping setup for this test {self._testMethodName}")
 
     def popen(self, *args, **kwargs):
         """Shortcut to open a subprocess and ensure it works."""
