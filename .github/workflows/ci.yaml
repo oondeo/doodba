@@ -203,7 +203,7 @@ jobs:
       - run: poetry run python -m unittest -v tests
 
   test:
-    # export DOCKER_TAG=17.0 PG_VERSIONS=11 ODOO_MINOR=17.0
+    # export DOCKER_TAG=17.0 PG_VERSIONS=11 ODOO_MINOR=17.0 DOODBA_SKIP_TESTS="test_dependencies,test_dotd"
     if: github.repository == 'oondeo/doodba' && github.ref == 'refs/heads/oondeo'
     runs-on: ubuntu-24.04
     needs: pre-commit
