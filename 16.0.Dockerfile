@@ -113,6 +113,7 @@ RUN mkdir -p auto/addons auto/geoip custom/src/private \
 COPY qa /qa
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv --system-site-packages /qa/venv \
+    && uv pip install --upgrade setuptools==80.10.2 \
     && . /qa/venv/bin/activate \
     && uv pip install \
         click \
@@ -152,8 +153,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     # disable gevent version recommendation from odoo and use 22.10.2 used in debian bookworm as python3-gevent
     && sed -i -E "s/(gevent==)21\.8\.0( ; sys_platform != 'win32' and python_version > '3.9' and python_version <= '3.10')/\122.10.2\2/;s/(greenlet==)1.1.2( ; sys_platform != 'win32' and python_version  > '3.9' and python_version <= '3.10')/\12.0.2\2/" requirements.txt \
     # need to upgrade setuptools, since the fixes for CVE-2024-6345 rolled out in base images we get errors "error: invalid command 'bdist_wheel'"
-    && uv pip install --system --upgrade setuptools \
-    && uv pip install --system -r requirements.txt \
+    && uv pip install --no-build-isolation --system --upgrade setuptools==80.10.2 \
+    && uv pip install --no-build-isolation --system -r requirements.txt \
         'websocket-client~=0.56' \
         astor \
         click-odoo-contrib \

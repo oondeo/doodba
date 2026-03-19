@@ -112,9 +112,11 @@ COPY qa /qa
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv --system-site-packages /qa/venv \
     && . /qa/venv/bin/activate \
+    && uv pip install --upgrade setuptools==80.10.2 \
     && uv pip install \
         click \
         coverage \
+    && uv cache prune --ci \
     && deactivate \
     && mkdir -p /qa/artifacts
 
@@ -153,8 +155,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     # cbor2==5.4.2 no longer builds as pkg_resources is removed, and 5.4.6 is already pre-built
     && sed -i -E "s/(cbor2==)5\.4\.2( ; python_version < '3.12')/\15.4.6\2/" requirements.txt \
     # need to upgrade setuptools, since the fixes for CVE-2024-6345 rolled out in base images we get errors "error: invalid command 'bdist_wheel'"
-    && uv pip install --system --upgrade setuptools \
-    && uv pip install --system -r requirements.txt \
+    && uv pip install --no-build-isolation --system --upgrade setuptools==80.10.2 \
+    && uv pip install --no-build-isolation --system -r requirements.txt \
         'websocket-client~=0.56' \
         astor \
         click-odoo-contrib \
@@ -177,6 +179,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     && (python3 -m compileall -q /usr/local/lib/python3.12/ || true) \
     && apt-get purge -yqq $build_deps \
     && apt-get autopurge -yqq \
+    && uv cache prune --ci \
     && rm -Rf /var/lib/apt/lists/* /tmp/*
 
 # Metadata

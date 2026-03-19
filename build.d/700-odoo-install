@@ -8,7 +8,7 @@ log INFO Installing Odoo from $src
 if [ "$PIP_INSTALL_ODOO" == true ]; then
     args="--no-cache-dir"
     if command -v uv >/dev/null 2>&1; then
-        uv pip install --system $args --editable $src
+        uv pip install --no-build-isolation --system $args --editable $src
     else
         pip install $args --editable $src
     fi

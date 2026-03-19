@@ -109,11 +109,13 @@ RUN mkdir -p auto/addons auto/geoip custom/src/private \
     && sed -i 's/.*DatabaseDirectory .*$/DatabaseDirectory \/opt\/odoo\/auto\/geoip\//g' /opt/odoo/auto/geoip/GeoIP.conf \
     && curl -LsSf https://astral.sh/uv/install.sh | env UV_UNMANAGED_INSTALL="/usr/bin" sh \
     && sync
+
 # Doodba-QA dependencies in a separate virtualenv
 COPY qa /qa
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv --system-site-packages /qa/venv \
     && . /qa/venv/bin/activate \
+    && uv pip install --upgrade setuptools==80.10.2 \
     && uv pip install \
         click \
         coverage \
@@ -154,8 +156,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
              s/(greenlet==)[0-9\.]+/\12.0.2/; \
              s/(reportlab==)[0-9\.]+/reportlab==3.6.13/" requirements.txt \
     # need to upgrade setuptools, since the fixes for CVE-2024-6345 rolled out in base images we get errors "error: invalid command 'bdist_wheel'"
-    && uv pip install --system --upgrade setuptools \
-    && uv pip install --system -r requirements.txt \
+    && uv pip install --no-build-isolation --system --upgrade setuptools==80.10.2 \
+    && uv pip install --no-build-isolation --system -r requirements.txt \
         'websocket-client~=0.56' \
         astor \
         click-odoo-contrib \

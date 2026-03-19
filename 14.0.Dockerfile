@@ -28,6 +28,9 @@ ENV DB_FILTER=.* \
     PUDB_RDB_PORT=6899 \
     PYTHONOPTIMIZE="" \
     UNACCENT=true \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_NO_MANAGED_PYTHON=1 \
     WAIT_DB=true \
     WDB_NO_BROWSER_AUTO_OPEN=True \
     WDB_SOCKET_SERVER=wdb \
@@ -104,12 +107,13 @@ RUN mkdir -p auto/addons auto/geoip custom/src/private \
     && curl -LsSf https://astral.sh/uv/install.sh | env UV_UNMANAGED_INSTALL="/usr/bin" sh \
     && sync
 
-
 # Doodba-QA dependencies in a separate virtualenv
 COPY qa /qa
-RUN python -m venv --system-site-packages /qa/venv \
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv venv --system-site-packages /qa/venv \
     && . /qa/venv/bin/activate \
-    && pip install \
+    && uv pip install --upgrade setuptools==57.5.0 \
+    && uv pip install \
         click \
         coverage \
         six \
@@ -121,7 +125,8 @@ ARG ODOO_VERSION=14.0
 ENV ODOO_VERSION="$ODOO_VERSION"
 
 # Install Odoo hard & soft dependencies, and Doodba utilities
-RUN build_deps=" \
+RUN --mount=type=cache,target=/root/.cache/uv \
+    build_deps=" \
         build-essential \
         libfreetype6-dev \
         libfribidi-dev \
@@ -146,11 +151,13 @@ RUN build_deps=" \
     && curl -o requirements.txt https://raw.githubusercontent.com/$ODOO_SOURCE/$ODOO_VERSION/requirements.txt \
     && echo "Setting gevent and greenlet versions to 21.12.0 and 1.1.0 (compatible with Debian Buster)" \
     && sed -i -E "s/(gevent==)[0-9\.]+/\121.12.0/; s/(greenlet==)[0-9\.]+/\11.1.0/" requirements.txt \
-    && pip install -r requirements.txt \
+    && uv pip install --no-build-isolation --system --upgrade setuptools==57.5.0 \
+    && uv pip install --no-build-isolation --system \
+        -r https://raw.githubusercontent.com/$ODOO_SOURCE/$ODOO_VERSION/requirements.txt \
         'websocket-client~=0.56' \
         astor \
         # Install fix from https://github.com/acsone/click-odoo-contrib/pull/93
-        git+https://github.com/oondeo/click-odoo-contrib.git@fix-active-modules-hashing \
+        git+https://github.com/Tecnativa/click-odoo-contrib.git@fix-active-modules-hashing \
         debugpy \
         pydevd-odoo \
         geoip2 \
@@ -248,11 +255,13 @@ ONBUILD COPY --chown=root:odoo $LOCAL_CUSTOM_DIR /opt/odoo/custom
 
 # https://docs.python.org/3/library/logging.html#levels
 ONBUILD ARG LOG_LEVEL=INFO
-ONBUILD RUN mkdir -p /opt/odoo/custom/ssh \
+ONBUILD RUN [ -d ~root/.ssh ] && rm -r ~root/.ssh; \
+            mkdir -p /opt/odoo/custom/ssh \
             && ln -s /opt/odoo/custom/ssh ~root/.ssh \
             && chmod -R u=rwX,go= /opt/odoo/custom/ssh \
             && sync
 ONBUILD ARG DB_VERSION=latest
-ONBUILD RUN /opt/odoo/common/build && sync
+ONBUILD RUN --mount=type=cache,target=/root/.cache/uv \
+            /opt/odoo/common/build && sync
 ONBUILD VOLUME ["/var/lib/odoo"]
 ONBUILD USER odoo

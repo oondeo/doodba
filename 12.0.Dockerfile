@@ -1,11 +1,13 @@
-FROM python:3.5-stretch AS base
+FROM python:3.8-slim-buster AS base
 
 EXPOSE 8069 8072
 
-ARG GEOIP_UPDATER_VERSION=4.1.5
-ARG MQT=https://github.com/OCA/maintainer-quality-tools.git
+ARG TARGETARCH
+ARG GEOIP_UPDATER_VERSION=6.0.0
+ARG WKHTMLTOPDF="./wkhtmltox.deb"
 ARG WKHTMLTOPDF_VERSION=0.12.5
-ARG WKHTMLTOPDF_CHECKSUM='1140b0ab02aa6e17346af2f14ed0de807376de475ba90e1db3975f112fbd20bb'
+ARG WKHTMLTOPDF_AMD64_CHECKSUM='dfab5506104447eef2530d1adb9840ee3a67f30caaad5e9bcb8743ef2f9421bd'
+ARG WKHTMLTOPDF_ARM64_CHECKSUM="3344e3a72f4cb4c1218cf48ac5fa9e88bef62aa7fa6f2295be7d5bc1fef100b1"
 ENV DB_FILTER=.* \
     DEPTH_DEFAULT=1 \
     DEPTH_MERGE=100 \
@@ -20,83 +22,74 @@ ENV DB_FILTER=.* \
     OPENERP_SERVER=/opt/odoo/auto/odoo.conf \
     PATH="/home/odoo/.local/bin:$PATH" \
     PIP_NO_CACHE_DIR=0 \
-    PTVSD_ARGS="--host 0.0.0.0 --port 6899 --wait --multiprocess" \
-    PTVSD_ENABLE=0 \
     DEBUGPY_ARGS="--listen 0.0.0.0:6899 --wait-for-client" \
     DEBUGPY_ENABLE=0 \
     PUDB_RDB_HOST=0.0.0.0 \
     PUDB_RDB_PORT=6899 \
     PYTHONOPTIMIZE="" \
     UNACCENT=true \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_NO_MANAGED_PYTHON=1 \
     WAIT_DB=true \
     WDB_NO_BROWSER_AUTO_OPEN=True \
     WDB_SOCKET_SERVER=wdb \
     WDB_WEB_PORT=1984 \
     WDB_WEB_SERVER=localhost
 
-# Debian stretch was moved to archive (and stretch-updates does not exist in archive)
-RUN sed -i 's,http://deb.debian.org,http://archive.debian.org,g;s,http://security.debian.org,http://archive.debian.org,g;s,\(.*stretch-updates\),#\1,' /etc/apt/sources.list
-
-# Other requirements and recommendations to run Odoo
+# Debian buster was moved to archive
+RUN sed -i 's,http://deb.debian.org,http://archive.debian.org,g;s,http://security.debian.org,http://archive.debian.org,g' /etc/apt/sources.list
+# Other requirements and recommendations
 # See https://github.com/$ODOO_SOURCE/blob/$ODOO_VERSION/debian/control
 RUN apt-get -qq update \
-    && apt-get -yqq upgrade \
     && apt-get install -yqq --no-install-recommends \
+        curl; \
+    if [ "$TARGETARCH" = "arm64" ]; then \
+        if [ "$WKHTMLTOPDF_VERSION" != "0.12.6.1" ]; then \
+            echo "Error: WKHTMLTOPDF_VERSION must be exactly 0.12.6.1 for arm builds. Forcing version to 0.12.6.1"; \
+            export WKHTMLTOPDF_VERSION="0.12.6.1";\
+        fi; \
+        WKHTMLTOPDF_URL="https://github.com/wkhtmltopdf/packaging/releases/download/${WKHTMLTOPDF_VERSION}-2/wkhtmltox_${WKHTMLTOPDF_VERSION}-2.bullseye_${TARGETARCH}.deb" \
+        WKHTMLTOPDF_CHECKSUM=$WKHTMLTOPDF_ARM64_CHECKSUM; \
+    elif [ "$TARGETARCH" = "amd64" ]; then \
+        WKHTMLTOPDF_URL="https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/${WKHTMLTOPDF_VERSION}/wkhtmltox_${WKHTMLTOPDF_VERSION}-1.buster_${TARGETARCH}.deb" \
+        WKHTMLTOPDF_CHECKSUM=$WKHTMLTOPDF_AMD64_CHECKSUM; \
+    else \
+        echo "Unsupported architecture: $TARGETARCH" >&2; \
+        exit 1; \
+    fi \
+    && curl -SLo wkhtmltox.deb ${WKHTMLTOPDF_URL} \
+    && echo "Downloading wkhtmltopdf from: ${WKHTMLTOPDF_URL}" \
+    && echo "Expected wkhtmltox checksum: ${WKHTMLTOPDF_CHECKSUM}" \
+    && echo "Computed wkhtmltox checksum: $(sha256sum wkhtmltox.deb | awk '{ print $1 }')" \
+    && echo "${WKHTMLTOPDF_CHECKSUM} wkhtmltox.deb" | sha256sum -c - \
+    && apt-get install -yqq --no-install-recommends "$WKHTMLTOPDF" \
         chromium \
         ffmpeg \
         fonts-liberation2 \
         gettext \
+        git \
         gnupg2 \
         locales-all \
         nano \
-        ruby \
+        npm \
+        openssh-client \
         telnet \
         vim \
         zlibc \
-        apt-transport-https \
-        ca-certificates \
-    && echo 'deb https://apt-archive.postgresql.org/pub/repos/apt stretch-pgdg main' >> /etc/apt/sources.list.d/postgresql.list \
+    && echo 'deb https://apt-archive.postgresql.org/pub/repos/apt buster-pgdg main' >> /etc/apt/sources.list.d/postgresql.list \
     && curl -SL https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
-    && curl https://bootstrap.pypa.io/pip/3.5/get-pip.py | python3 /dev/stdin \
-    && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
     && apt-get update \
-    && apt-get install -yqq --no-install-recommends nodejs \
-    && curl -SLo wkhtmltox.deb https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/${WKHTMLTOPDF_VERSION}/wkhtmltox_${WKHTMLTOPDF_VERSION}-1.stretch_amd64.deb \
-    && echo "${WKHTMLTOPDF_CHECKSUM}  wkhtmltox.deb" | sha256sum -c - \
-    && apt-get install -yqq --no-install-recommends ./wkhtmltox.deb \
-    && rm wkhtmltox.deb \
-    && wkhtmltopdf --version \
-    && curl --silent -L --output geoipupdate_${GEOIP_UPDATER_VERSION}_linux_amd64.deb https://github.com/maxmind/geoipupdate/releases/download/v${GEOIP_UPDATER_VERSION}/geoipupdate_${GEOIP_UPDATER_VERSION}_linux_amd64.deb \
-    && dpkg -i geoipupdate_${GEOIP_UPDATER_VERSION}_linux_amd64.deb \
-    && rm geoipupdate_${GEOIP_UPDATER_VERSION}_linux_amd64.deb \
-    && rm -Rf /var/lib/apt/lists/* /tmp/*
-
-# Special case to get latest Less
-RUN ln -s /usr/bin/nodejs /usr/local/bin/node \
-    && npm install -g less \
-    && rm -Rf ~/.npm /tmp/*
-
-# Other facilities
-WORKDIR /opt/odoo
-RUN pip install \
-        astor \
-        # Install fix from https://github.com/acsone/click-odoo-contrib/pull/93
-        git+https://github.com/oondeo/click-odoo-contrib.git@fix-active-modules-hashing \
-        "git-aggregator<3.0.0" \
-        "pg_activity<2.0.0" \
-        plumbum \
-        ptvsd \
-        debugpy \
-        pydevd-odoo \
-        pudb \
-        python-magic \
-        watchdog \
-        wdb \
-        geoip2 \
-        inotify \
+    && curl --silent -L --output geoipupdate_${GEOIP_UPDATER_VERSION}_linux_${TARGETARCH}.deb https://github.com/maxmind/geoipupdate/releases/download/v${GEOIP_UPDATER_VERSION}/geoipupdate_${GEOIP_UPDATER_VERSION}_linux_${TARGETARCH}.deb \
+    && dpkg -i geoipupdate_${GEOIP_UPDATER_VERSION}_linux_${TARGETARCH}.deb \
+    && rm geoipupdate_${GEOIP_UPDATER_VERSION}_linux_${TARGETARCH}.deb \
+    && apt-get autopurge -yqq \
+    && rm -Rf wkhtmltox.deb /var/lib/apt/lists/* /tmp/* \
     && sync
-COPY bin-deprecated/* bin/* /usr/local/bin/
-COPY lib/doodbalib /usr/local/lib/python3.5/site-packages/doodbalib
+
+WORKDIR /opt/odoo
+COPY bin/* /usr/local/bin/
+COPY lib/doodbalib /usr/local/lib/python3.8/site-packages/doodbalib
 COPY build.d common/build.d
 COPY conf.d common/conf.d
 COPY entrypoint.d common/entrypoint.d
@@ -106,7 +99,7 @@ RUN mkdir -p auto/addons auto/geoip custom/src/private \
     && ln /usr/local/bin/direxec common/entrypoint \
     && ln /usr/local/bin/direxec common/build \
     && chmod -R a+rx common/entrypoint* common/build* /usr/local/bin \
-    && chmod -R a+rX /usr/local/lib/python3.5/site-packages/doodbalib \
+    && chmod -R a+rX /usr/local/lib/python3.8/site-packages/doodbalib \
     && cp -a /etc/GeoIP.conf /etc/GeoIP.conf.orig \
     && mv /etc/GeoIP.conf /opt/odoo/auto/geoip/GeoIP.conf \
     && ln -s /opt/odoo/auto/geoip/GeoIP.conf /etc/GeoIP.conf \
@@ -116,36 +109,72 @@ RUN mkdir -p auto/addons auto/geoip custom/src/private \
 
 # Doodba-QA dependencies in a separate virtualenv
 COPY qa /qa
-RUN python -m venv --system-site-packages /qa/venv \
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv venv --system-site-packages /qa/venv \
     && . /qa/venv/bin/activate \
-    # HACK: Upgrade pip: higher version needed to install pyproject.toml based packages
-    && pip install -U pip \
-    && pip install --no-cache-dir \
+    && uv pip install --upgrade setuptools==57.5.0 \
+    && uv pip install \
         click \
         coverage \
-        flake8 \
-        git+https://github.com/OCA/pylint-odoo.git@refs/pull/329/head \
         six \
-    && npm install --loglevel error --prefix /qa 'eslint@<7' \
     && deactivate \
-    && mkdir -p /qa/artifacts \
-    && git clone --depth 1 $MQT /qa/mqt
+    && mkdir -p /qa/artifacts
 
-# Execute installation script by Odoo version
-# This is at the end to benefit from cache at build time
-# https://docs.docker.com/engine/reference/builder/#/impact-on-build-caching
 ARG ODOO_SOURCE=OCA/OCB
 ARG ODOO_VERSION=12.0
 ENV ODOO_VERSION="$ODOO_VERSION"
-RUN debs="libldap2-dev libsasl2-dev" \
+
+# Install Odoo hard & soft dependencies, and Doodba utilities
+RUN --mount=type=cache,target=/root/.cache/uv \
+    build_deps=" \
+        build-essential \
+        libfreetype6-dev \
+        libfribidi-dev \
+        libghc-zlib-dev \
+        libharfbuzz-dev \
+        libjpeg-dev \
+        liblcms2-dev \
+        libldap2-dev \
+        libopenjp2-7-dev \
+        libpq-dev \
+        libsasl2-dev \
+        libtiff5-dev \
+        libwebp-dev \
+        libxml2-dev \
+        libxslt-dev \
+        tcl-dev \
+        tk-dev \
+        zlib1g-dev \
+    " \
     && apt-get update \
-    && apt-get install -yqq --no-install-recommends $debs \
-    && pip install \
+    && apt-get install -yqq --no-install-recommends $build_deps \
+    && curl -o requirements.txt https://raw.githubusercontent.com/$ODOO_SOURCE/$ODOO_VERSION/requirements.txt \
+    && echo "Setting gevent and greenlet versions to 21.12.0 and 1.1.0 (compatible with Debian Buster)" \
+    && sed -i -E "s/(gevent==)[0-9\.]+/\121.12.0/; s/(greenlet==)[0-9\.]+/\11.1.0/" requirements.txt \
+    && uv pip install --no-build-isolation --system --upgrade setuptools==57.5.0 \
+    && uv pip install --no-build-isolation --system \
         -r https://raw.githubusercontent.com/$ODOO_SOURCE/$ODOO_VERSION/requirements.txt \
+        'websocket-client~=0.56' \
+        astor \
+        # Install fix from https://github.com/acsone/click-odoo-contrib/pull/93
+        git+https://github.com/Tecnativa/click-odoo-contrib.git@fix-active-modules-hashing \
+        debugpy \
+        pydevd-odoo \
+        geoip2 \
+        "git-aggregator<3.0.0" \
+        inotify \
+        pdfminer.six \
+        pg_activity \
         phonenumbers \
-        'websocket-client~=0.53' \
-    && (python3 -m compileall -q /usr/local/lib/python3.5/ || true) \
-    && apt-get purge -yqq $debs \
+        plumbum \
+        pudb \
+        pyOpenSSL \
+        python-magic \
+        watchdog \
+        wdb \
+    && (python3 -m compileall -q /usr/local/lib/python3.8/ || true) \
+    && apt-get purge -yqq $build_deps \
+    && apt-get autopurge -yqq \
     && rm -Rf /var/lib/apt/lists/* /tmp/*
 
 # Metadata
@@ -202,6 +231,7 @@ ONBUILD ARG PGPASSWORD=odoopassword
 ONBUILD ARG PGHOST=db
 ONBUILD ARG PGPORT=5432
 ONBUILD ARG PGDATABASE=prod
+
 # Config variables
 ONBUILD ENV ADMIN_PASSWORD="$ADMIN_PASSWORD" \
             DEFAULT_REPO_PATTERN="$DEFAULT_REPO_PATTERN" \
@@ -225,13 +255,13 @@ ONBUILD COPY --chown=root:odoo $LOCAL_CUSTOM_DIR /opt/odoo/custom
 
 # https://docs.python.org/3/library/logging.html#levels
 ONBUILD ARG LOG_LEVEL=INFO
-ONBUILD RUN mkdir -p /opt/odoo/custom/ssh \
+ONBUILD RUN [ -d ~root/.ssh ] && rm -r ~root/.ssh; \
+            mkdir -p /opt/odoo/custom/ssh \
             && ln -s /opt/odoo/custom/ssh ~root/.ssh \
             && chmod -R u=rwX,go= /opt/odoo/custom/ssh \
             && sync
 ONBUILD ARG DB_VERSION=latest
-ONBUILD RUN /opt/odoo/common/build && sync
+ONBUILD RUN --mount=type=cache,target=/root/.cache/uv \
+            /opt/odoo/common/build && sync
 ONBUILD VOLUME ["/var/lib/odoo"]
 ONBUILD USER odoo
-# HACK Special case for Werkzeug
-ONBUILD RUN pip install --user Werkzeug==0.14.1
