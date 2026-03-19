@@ -113,8 +113,8 @@ RUN mkdir -p auto/addons auto/geoip custom/src/private \
 COPY qa /qa
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv --system-site-packages /qa/venv \
-    && uv pip install --upgrade setuptools==80.10.2 \
     && . /qa/venv/bin/activate \
+    && uv pip install --upgrade setuptools==80.10.2 \
     && uv pip install \
         click \
         coverage \

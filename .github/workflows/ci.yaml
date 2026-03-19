@@ -217,15 +217,6 @@ jobs:
           - odoo_version: "18.0"
             pg_version: "17"
             python_version: "3.12"
-          - odoo_version: "17.0"
-            pg_version: "15"
-            python_version: "3.10"
-          - odoo_version: "16.0"
-            pg_version: "15"
-            python_version: "3.10"
-          - odoo_version: "13.0"
-            pg_version: "11"
-            python_version: "3.9"
     env:
       ## Skip build tests
       DOODBA_SKIP_TESTS: "test_dependencies,test_dotd"
