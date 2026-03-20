@@ -153,8 +153,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     && apt-get update \
     && apt-get install -yqq --no-install-recommends $build_deps \
     && curl -o requirements.txt https://raw.githubusercontent.com/$ODOO_SOURCE/$ODOO_VERSION/requirements.txt \
-    # cbor2==5.4.2 no longer builds as pkg_resources is removed, and 5.4.6 is already pre-built
-    && sed -i -E "s/(cbor2==)5\.4\.2( ; python_version < '3.12')/\15.4.6\2/" requirements.txt \
     # need to upgrade setuptools, since the fixes for CVE-2024-6345 rolled out in base images we get errors "error: invalid command 'bdist_wheel'"
     && uv pip install --no-build-isolation --system --upgrade setuptools==80.10.2 \
     && uv pip install --no-build-isolation --system --only-binary :all: \

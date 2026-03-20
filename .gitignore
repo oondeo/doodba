@@ -5,3 +5,4 @@ tests/scaffoldings/repo_merge/custom/src/odoo
 tests/scaffoldings/test_artifacts/test-artifacts
 *.env
 *.venv
+*.log

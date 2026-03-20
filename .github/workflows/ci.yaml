@@ -210,13 +210,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        odoo_version: ["19.0"]
+        odoo_version: ["18.0"]
         pg_version: ["17"]
         python_version: ["3.12"]
-        include:
-          - odoo_version: "18.0"
-            pg_version: "17"
-            python_version: "3.12"
     env:
       ## Skip build tests
       DOODBA_SKIP_TESTS: "test_dependencies,test_dotd"
