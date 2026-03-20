@@ -181,7 +181,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     && (python3 -m compileall -q /usr/local/lib/python3.12/ || true) \
     && apt-get purge -yqq $build_deps \
     && apt-get autopurge -yqq \
-    && uv cache prune --ci \
     && rm -Rf /var/lib/apt/lists/* /tmp/*
 
 # Metadata
