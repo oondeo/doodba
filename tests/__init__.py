@@ -857,6 +857,18 @@ class ScaffoldingCase(unittest.TestCase):
                     "{}",
                     ";",
                 ),
+                # check chromium version
+                ("chromium", "--version"),
+                # check that chromium is working before testing with odoo
+                (
+                    "chromium",
+                    "--no-sandbox",
+                    "--headless",
+                    "--dump-dom",
+                    "--enable-logging=stderr",
+                    "--v=1",
+                    "about:blank",
+                ),
                 # install odoo base module
                 (
                     "odoo",
